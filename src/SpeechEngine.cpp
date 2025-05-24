@@ -2,6 +2,10 @@
 #include "VoicevoxClient.h"
 #include <M5Unified.h>
 #include <queue>
+#ifndef AUDIO_OUTPUT_M5_SPEAKER_H
+#define AUDIO_OUTPUT_M5_SPEAKER_H
+#include "AudioOutputM5Speaker.h"
+#endif
 
 namespace SpeechEngine {
   static bool initialized = false;
@@ -11,9 +15,10 @@ namespace SpeechEngine {
   static std::queue<String> speechQueue;
   static String currentUrl = "";
 
-  bool initSpeechEngine(const String& apiKey, const String& speakerNo) {
+  bool initSpeechEngine(const String& apiKey, const String& speakerNo, AudioOutputM5Speaker* audioOut) {
     _apiKey = apiKey;
     _speakerNo = speakerNo;
+    setAudioOutput(audioOut);
     if (initVoicevoxClient()) {
       initialized = true;
       return true;

@@ -3,10 +3,15 @@
 #include "WiFiHelper.h" 
 #include "SpeechEngine.h"  // 追加
 #include "SDUtils.h"
+#ifndef AUDIO_OUTPUT_M5_SPEAKER_H
+#define AUDIO_OUTPUT_M5_SPEAKER_H
+#include "AudioOutputM5Speaker.h"
+#endif
 
 using namespace m5avatar;
 
 Avatar avatar;
+AudioOutputM5Speaker* audioOut = nullptr;
 
 void outputMessage(String message) {
   Serial.println(message);
@@ -27,17 +32,49 @@ void playbackTask(void*) {
   }
 }
 
+void lipSync(void *args)
+{
+  float gazeX, gazeY;
+  int level = 0;
+  DriveContext *ctx = (DriveContext *)args;
+  Avatar *avatar = ctx->getAvatar();
+  for (;;)
+  {
+    level = abs(*audioOut->getBuffer());
+    if(level<100) level = 0;
+    if(level > 15000)
+    {
+      level = 15000;
+    }
+    float open = (float)level/15000.0;
+    avatar->setMouthOpenRatio(open);
+    avatar->getGaze(&gazeY, &gazeX);
+    avatar->setRotation(gazeX * 5);
+    delay(50);
+  }
+}
+
 void setup() {
   M5.begin();
   Serial.begin(115200);  // ★これを追加
   delay(100);            // ★シリアル同期用の短い待機
   std::vector<String> keys;
 
+    // スピーカーの設定
+  auto spk_cfg = M5.Speaker.config();
+  spk_cfg.sample_rate = 96000;
+  spk_cfg.task_pinned_core = APP_CPU_NUM;
+  M5.Speaker.config(spk_cfg);
+  M5.Speaker.begin();
+  M5.Speaker.setVolume(100);
+  audioOut = new AudioOutputM5Speaker(&M5.Speaker, 0);
+
+
   outputMessage("Initilize SD card");
   if (initSDCard()) {
     if (readLinesFromSD("/apikey.txt", keys) && keys.size() >= 3) {
       String voicevoxKey = keys[1];
-      SpeechEngine::initSpeechEngine(voicevoxKey, "3");  // APIキーだけ渡す
+      SpeechEngine::initSpeechEngine(voicevoxKey, "3", audioOut);  // APIキーだけ渡す
       outputMessage("Scceeded to read /apikey.txt");
     } else {
       M5.Lcd.println("APIキー読み込み失敗");
@@ -55,18 +92,12 @@ void setup() {
     outputMessage("Wi-Fi connection failed. Check settings.");
   }
 
-  // スピーカーの設定
-  auto spk_cfg = M5.Speaker.config();
-  spk_cfg.sample_rate = 96000;
-  spk_cfg.task_pinned_core = APP_CPU_NUM;
-  M5.Speaker.config(spk_cfg);
-  M5.Speaker.begin();
-  M5.Speaker.setVolume(100);
 
   delay(1000);
   avatar.init();  
   avatar.addTask(speechTask, "speech", 6144);
   avatar.addTask(playbackTask, "playback", 6144);
+  avatar.addTask(lipSync, "lipSync");
   avatar.setSpeechFont(&fonts::efontJA_16);
   delay(1000);
 

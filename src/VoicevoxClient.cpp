@@ -3,7 +3,10 @@
 #include <AudioGeneratorMP3.h>
 #include <AudioFileSourceBuffer.h>
 #include "AudioFileSourceHTTPSStream.h"
+#ifndef AUDIO_OUTPUT_M5_SPEAKER_H
+#define AUDIO_OUTPUT_M5_SPEAKER_H
 #include "AudioOutputM5Speaker.h"
+#endif
 #include "rootCA.h"
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
@@ -14,6 +17,9 @@ static AudioFileSourceBuffer* buff = nullptr;
 static AudioFileSourceHTTPSStream* file = nullptr;
 static uint8_t* preallocateBuffer = nullptr;
 static const int bufferSize = 30 * 1024;
+static bool playbackActive = false;
+static AudioOutputM5Speaker* audioOut = nullptr;
+
 
 bool initVoicevoxClient() {
   preallocateBuffer = (uint8_t*)malloc(bufferSize);
@@ -23,8 +29,13 @@ bool initVoicevoxClient() {
 }
 
 bool isMP3Running() {
-  return mp3 && mp3->isRunning();
+  return playbackActive;
 }
+
+void setAudioOutput(AudioOutputM5Speaker* out) {
+  audioOut = out;
+}
+
 
 static String urlencode(const String& msg) {
   String encoded = "";
@@ -113,11 +124,15 @@ void playMP3FromUrl(const String& mp3url) {
     return;
   }
 
-  static AudioOutputM5Speaker audioOut(&M5.Speaker, 0); 
-  bool success = mp3->begin(buff, &audioOut);
+  if (audioOut == nullptr) {
+    Serial.println("[VoicevoxClient] Audio output not set, using default M5 Speaker.");
+  }
+  bool success = mp3->begin(buff, audioOut);
   if (!success) {
+    playbackActive = false;
     Serial.println("[VoicevoxClient] MP3 playback failed to start.");
   } else {
+    playbackActive = true;
     Serial.println("[VoicevoxClient] MP3 playback started.");
   }
 }
@@ -132,6 +147,7 @@ void updatePlayback() {
       Serial.println("[VoicevoxClient] MP3 playback finished.");
       M5.Speaker.end();
       M5.Mic.begin();
+      playbackActive = false;
     }
   }
 }
