@@ -7,12 +7,23 @@
 #include "AudioOutputM5Speaker.h"
 #endif
 
+String toneToString(SpeechTone tone){
+  switch(tone) {
+    case SpeechTone::Happy: return "1";
+    case SpeechTone::Angry: return "7";
+    case SpeechTone::Doubt: return "75";
+    case SpeechTone::Neutral: return "3";
+    case SpeechTone::Sad: return "76";
+    case SpeechTone::Sleepy: return "22";
+  }
+}
+
 namespace SpeechEngine {
   static bool initialized = false;
 
   static String _apiKey;
   static String _speakerNo;
-  static std::queue<String> speechQueue;
+  static std::queue<Speech> speechQueue;
   static String currentUrl = "";
 
   bool initSpeechEngine(const String& apiKey, const String& speakerNo, AudioOutputM5Speaker* audioOut) {
@@ -32,8 +43,15 @@ namespace SpeechEngine {
   }
 
   void enqueueText(const String& text) {
-    speechQueue.push(text);
+    Speech speech{_speakerNo, text};
+    speechQueue.push(speech);
     Serial.println("Enqueued text: " + text);
+  }
+
+  void enqueueText(SpeechTone tone, const String& text) {
+    Speech speech{toneToString(tone), text};
+    speechQueue.push(speech);
+    Serial.println("Enqueued text: " + text + " with speaker no. " + toneToString(tone));
   }
 
   void processSpeechQueue() {
@@ -51,9 +69,9 @@ namespace SpeechEngine {
     // MP3再生中でもURL未取得なら次の音声のURLを先に取得
     if (currentUrl.isEmpty() && !speechQueue.empty()) {
       Serial.println("Fetching next speech URL...");
-      const String& text = speechQueue.front();
-      String param = "&speaker=" + _speakerNo;
-      currentUrl = fetchVoicevoxUrl(_apiKey, text, param);
+      Speech speech = speechQueue.front();
+      String param = "&speaker=" + speech.speakerNo;
+      currentUrl = fetchVoicevoxUrl(_apiKey, speech.text, param);
 
       if (currentUrl.isEmpty()) {
         Serial.println("[SpeechEngine] Failed to fetch MP3 URL");
