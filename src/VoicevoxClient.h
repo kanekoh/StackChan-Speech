@@ -13,3 +13,4 @@ bool isMP3Running();
 void updatePlayback();
 char* getAudioOutput();
 void setAudioOutput(AudioOutputM5Speaker* out);
+AudioOutputM5Speaker* getAudioOutputM5Speaker();

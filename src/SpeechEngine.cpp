@@ -96,4 +96,8 @@ namespace SpeechEngine {
     _speakerNo = no;
   }
 
+  AudioOutputM5Speaker* getAudioOutput(){
+    return getAudioOutputM5Speaker();
+  }
+
 }

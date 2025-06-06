@@ -36,6 +36,9 @@ void setAudioOutput(AudioOutputM5Speaker* out) {
   audioOut = out;
 }
 
+AudioOutputM5Speaker* getAudioOutputM5Speaker() {
+  return audioOut;
+}
 
 static String urlencode(const String& msg) {
   String encoded = "";

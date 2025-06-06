@@ -32,4 +32,6 @@ namespace SpeechEngine {
   bool isSpeaking();
   void setSpeakerNo(const String& no);
   void playback();
+  AudioOutputM5Speaker* getAudioOutput();
+
 }
