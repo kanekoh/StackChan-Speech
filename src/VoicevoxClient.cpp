@@ -11,6 +11,7 @@
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
+#include "I2SBlockingGuard.h"
 
 static AudioGeneratorMP3* mp3 = nullptr;
 static AudioFileSourceBuffer* buff = nullptr;
@@ -19,7 +20,7 @@ static uint8_t* preallocateBuffer = nullptr;
 static const int bufferSize = 30 * 1024;
 static bool playbackActive = false;
 static AudioOutputM5Speaker* audioOut = nullptr;
-
+static I2SBlockingGuard* speakerGuard = nullptr;
 
 bool initVoicevoxClient() {
   preallocateBuffer = (uint8_t*)malloc(bufferSize);
@@ -115,6 +116,8 @@ void playMP3FromUrl(const String& mp3url) {
   Serial.println("[VoicevoxClient] Starting playback...");
   Serial.println("[VoicevoxClient] MP3 URL: " + mp3url);
 
+  speakerGuard = new I2SBlockingGuard(I2SMode::Playing);
+
   file = new AudioFileSourceHTTPSStream(mp3url.c_str(), root_ca);
   if (!file) {
     Serial.println("[VoicevoxClient] Failed to create HTTPS stream.");
@@ -133,6 +136,7 @@ void playMP3FromUrl(const String& mp3url) {
   bool success = mp3->begin(buff, audioOut);
   if (!success) {
     playbackActive = false;
+    delete speakerGuard; speakerGuard = nullptr;  // 🔓 ロック解放
     Serial.println("[VoicevoxClient] MP3 playback failed to start.");
   } else {
     playbackActive = true;
@@ -149,7 +153,8 @@ void updatePlayback() {
 
       Serial.println("[VoicevoxClient] MP3 playback finished.");
       M5.Speaker.end();
-      M5.Mic.begin();
+      delete speakerGuard; speakerGuard = nullptr;  // 🔓 明示的に解放
+      // M5.Mic.begin();
       playbackActive = false;
     }
   }
