@@ -61,7 +61,6 @@ namespace SpeechEngine {
     // 再生中でない & URLがあるなら再生開始
     if (!currentUrl.isEmpty() && !isMP3Running()) {
       Serial.println("[SpeechEngine] Starting playback from URL");
-      M5.Mic.end();
       playbackQueue.enqueue(currentUrl);
       // playMP3FromUrl(currentUrl);
       currentUrl = "";
