@@ -21,11 +21,13 @@ static uint8_t* preallocateBuffer = nullptr;
 static const int bufferSize = 30 * 1024;
 static bool playbackActive = false;
 static AudioOutputM5Speaker* audioOut = nullptr;
-static I2SBlockingGuard* speakerGuard = nullptr;
 
 bool initVoicevoxClient() {
   preallocateBuffer = (uint8_t*)malloc(bufferSize);
-  if (!preallocateBuffer) return false;
+  if (!preallocateBuffer) {
+    Serial.println("[VoicevoxClient] ❌ Failed to allocate buffer.");
+    return false;
+  }
   mp3 = new AudioGeneratorMP3();
   return true;
 }
@@ -128,6 +130,8 @@ void playMP3FromUrlBlocking(const String& mp3url) {
 
   if (audioOut == nullptr) {
     Serial.println("[VoicevoxClient] Audio output not set, using default M5 Speaker.");
+    delete buff; delete file;
+    return;
   }
   bool success = mp3->begin(buff, audioOut);
   if (!success) {
@@ -138,74 +142,22 @@ void playMP3FromUrlBlocking(const String& mp3url) {
     Serial.println("[VoicevoxClient] MP3 playback started.");
   }
 
-  while (mp3->isRunning()) {
-    if (!mp3->loop()) {
-      mp3->stop();
-      if (file) {  
-        file->close();
-        delete file; 
-        file = nullptr; 
-      }
-      if (buff) { delete buff; buff = nullptr; }
-
-      Serial.println("[VoicevoxClient] MP3 playback finished.");
-      delay(200);
-      playbackActive = false;
-    }
+  while (mp3->loop()) {
     delay(1);
   }
 
+  mp3->stop();
 
-}
-void playMP3FromUrl(const String& mp3url) {
-  if (mp3url == "") {
-    Serial.println("[VoicevoxClient] Empty MP3 URL, skipping playback.");
-    return;
+  if (file) {  
+    file->close();
+    delete file; 
+    file = nullptr; 
   }
 
-  Serial.println("[VoicevoxClient] Starting playback...");
-  Serial.println("[VoicevoxClient] MP3 URL: " + mp3url);
+  if (buff) { delete buff; buff = nullptr; }
 
-  speakerGuard = new I2SBlockingGuard(I2SMode::Playing);
+  Serial.println("[VoicevoxClient] MP3 playback finished.");
+  delay(200);
+  playbackActive = false;
 
-  file = new AudioFileSourceHTTPSStream(mp3url.c_str(), root_ca);
-  if (!file) {
-    Serial.println("[VoicevoxClient] Failed to create HTTPS stream.");
-    return;
-  }
-
-  buff = new AudioFileSourceBuffer(file, preallocateBuffer, bufferSize);
-  if (!buff) {
-    Serial.println("[VoicevoxClient] Failed to create audio buffer.");
-    return;
-  }
-
-  if (audioOut == nullptr) {
-    Serial.println("[VoicevoxClient] Audio output not set, using default M5 Speaker.");
-  }
-  bool success = mp3->begin(buff, audioOut);
-  if (!success) {
-    playbackActive = false;
-    delete speakerGuard; speakerGuard = nullptr;  // 🔓 ロック解放
-    Serial.println("[VoicevoxClient] MP3 playback failed to start.");
-  } else {
-    playbackActive = true;
-    Serial.println("[VoicevoxClient] MP3 playback started.");
-  }
-}
-
-void updatePlayback() {
-  if (mp3 != nullptr && mp3->isRunning()) {
-    if (!mp3->loop()) {
-      mp3->stop();
-      if (file) { delete file; file = nullptr; }
-      if (buff) { delete buff; buff = nullptr; }
-
-      Serial.println("[VoicevoxClient] MP3 playback finished.");
-      M5.Speaker.end();
-      delete speakerGuard; speakerGuard = nullptr;  // 🔓 明示的に解放
-      // M5.Mic.begin();
-      playbackActive = false;
-    }
-  }
 }

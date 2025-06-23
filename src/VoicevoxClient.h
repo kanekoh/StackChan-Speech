@@ -8,10 +8,8 @@
 
 bool initVoicevoxClient();
 String fetchVoicevoxUrl(const String& apiKey, const String& text, const String& speakerParam);
-void playMP3FromUrl(const String& url);
 void playMP3FromUrlBlocking(const String& url);
 bool isMP3Running();
-void updatePlayback();
 char* getAudioOutput();
 void setAudioOutput(AudioOutputM5Speaker* out);
 AudioOutputM5Speaker* getAudioOutputM5Speaker();
