@@ -133,6 +133,7 @@ void playMP3FromUrlBlocking(const String& mp3url) {
     delete buff; delete file;
     return;
   }
+  Serial.printf("[MP3] Start playback: %s\n", mp3url.c_str());
   bool success = mp3->begin(buff, audioOut);
   if (!success) {
     playbackActive = false;
@@ -147,6 +148,7 @@ void playMP3FromUrlBlocking(const String& mp3url) {
   }
 
   mp3->stop();
+  Serial.println("[MP3] Stop / cleanup");
 
   if (file) {  
     file->close();
