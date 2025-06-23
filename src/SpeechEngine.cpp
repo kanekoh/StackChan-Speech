@@ -2,6 +2,7 @@
 #include "VoicevoxClient.h"
 #include <M5Unified.h>
 #include <queue>
+#include "PlaybackQueue.h"
 #ifndef AUDIO_OUTPUT_M5_SPEAKER_H
 #define AUDIO_OUTPUT_M5_SPEAKER_H
 #include "AudioOutputM5Speaker.h"
@@ -61,7 +62,8 @@ namespace SpeechEngine {
     if (!currentUrl.isEmpty() && !isMP3Running()) {
       Serial.println("[SpeechEngine] Starting playback from URL");
       M5.Mic.end();
-      playMP3FromUrl(currentUrl);
+      playbackQueue.enqueue(currentUrl);
+      // playMP3FromUrl(currentUrl);
       currentUrl = "";
       return;
     }
