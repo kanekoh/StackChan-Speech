@@ -87,7 +87,8 @@ namespace SpeechEngine {
   }
 
   void playback() {
-    updatePlayback();
+    String url = playbackQueue.dequeue();
+    playMP3FromUrlBlocking(url);
   }
 
   bool isSpeaking() {
