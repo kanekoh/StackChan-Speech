@@ -112,7 +112,7 @@ void playMP3FromUrlBlocking(const String& mp3url) {
   Serial.println("[VoicevoxClient] Starting playback...");
   Serial.println("[VoicevoxClient] MP3 URL: " + mp3url);
 
-    speakerGuard = new I2SBlockingGuard(I2SMode::Playing);
+  I2SBlockingGuard guard(I2SMode::Playing);  // 🔒 ロックをスコープに閉じる
 
   file = new AudioFileSourceHTTPSStream(mp3url.c_str(), root_ca);
   if (!file) {
@@ -132,7 +132,6 @@ void playMP3FromUrlBlocking(const String& mp3url) {
   bool success = mp3->begin(buff, audioOut);
   if (!success) {
     playbackActive = false;
-    delete speakerGuard; speakerGuard = nullptr;  // 🔓 ロック解放
     Serial.println("[VoicevoxClient] MP3 playback failed to start.");
   } else {
     playbackActive = true;
@@ -142,13 +141,15 @@ void playMP3FromUrlBlocking(const String& mp3url) {
   while (mp3->isRunning()) {
     if (!mp3->loop()) {
       mp3->stop();
-      if (file) { delete file; file = nullptr; }
+      if (file) {  
+        file->close();
+        delete file; 
+        file = nullptr; 
+      }
       if (buff) { delete buff; buff = nullptr; }
 
       Serial.println("[VoicevoxClient] MP3 playback finished.");
-      M5.Speaker.end();
-      delete speakerGuard; speakerGuard = nullptr;  // 🔓 明示的に解放
-      // M5.Mic.begin();
+      delay(200);
       playbackActive = false;
     }
     delay(1);
